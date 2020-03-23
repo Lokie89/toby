@@ -1,3 +1,5 @@
+package dao;
+
 import java.sql.*;
 
 public abstract class UserDao {
@@ -36,6 +38,6 @@ public abstract class UserDao {
         return user;
     }
 
-    public abstract Connection getConnection() throws SQLException, ClassNotFoundException;
+    protected abstract Connection getConnection() throws SQLException, ClassNotFoundException;
 
 }
