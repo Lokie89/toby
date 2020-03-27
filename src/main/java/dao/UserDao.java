@@ -14,8 +14,21 @@ public /*abstract*/ class UserDao {
 
     private ConnectionMaker connectionMaker;
 
-    public UserDao(ConnectionMaker connectionMaker) {
+    private static UserDao INSTANCE;
+
+//    public UserDao(ConnectionMaker connectionMaker) {
+//        this.connectionMaker = connectionMaker;
+//    }
+
+    private UserDao(ConnectionMaker connectionMaker) {
         this.connectionMaker = connectionMaker;
+    }
+
+    public static synchronized UserDao getInstance(ConnectionMaker connectionMaker) {
+        if (INSTANCE == null) {
+            INSTANCE = new UserDao(connectionMaker); // connectionMaker 을 넣어줄 수 없음.
+        }
+        return INSTANCE;
     }
 
     public void add(User user) throws ClassNotFoundException, SQLException {
