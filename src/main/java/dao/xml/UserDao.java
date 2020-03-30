@@ -1,40 +1,29 @@
-package dao;
+package dao.xml;
 
+import dao.User;
+
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public /*abstract*/ class UserDao {
-//    private SimpleConnectionMaker simpleConnectionMaker;
-//
-//    public UserDao(SimpleConnectionMaker simpleConnectionMaker){
-//        this.simpleConnectionMaker = simpleConnectionMaker;
-//    }
+public class UserDao {
 
+    private DataSource dataSource;
     private ConnectionMaker connectionMaker;
 
-    private static UserDao INSTANCE;
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
-//    public UserDao(ConnectionMaker connectionMaker) {
-//        this.connectionMaker = connectionMaker;
-//    }
-
-    private UserDao(ConnectionMaker connectionMaker) {
+    public void setConnectionMaker(ConnectionMaker connectionMaker) {
         this.connectionMaker = connectionMaker;
     }
-
-    public static synchronized UserDao getInstance(ConnectionMaker connectionMaker) {
-        if (INSTANCE == null) {
-            INSTANCE = new UserDao(connectionMaker)/*.setConnectionMaker(connectionMaker)*/; // connectionMaker 을 넣어줄 수 없음.
-        }
-        return INSTANCE;
-    }
-
-
     public void add(User user) throws ClassNotFoundException, SQLException {
 //        Connection connection = simpleConnectionMaker.makeNewConnection();
-        Connection connection = connectionMaker.makeConnection();
+        delete();
+        Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
                 connection.prepareStatement("insert into users(id, name, password) values(?, ?, ?)");
 
@@ -49,7 +38,9 @@ public /*abstract*/ class UserDao {
 
     public User get(String id) throws ClassNotFoundException, SQLException {
 //        Connection connection = simpleConnectionMaker.makeNewConnection();
-        Connection connection = connectionMaker.makeConnection();
+//        Connection connection = connectionMaker.makeConnection();
+        Connection connection = dataSource.getConnection();
+
         PreparedStatement preparedStatement =
                 connection.prepareStatement("select * from users where id = ?");
 
@@ -67,6 +58,18 @@ public /*abstract*/ class UserDao {
         preparedStatement.close();
         connection.close();
         return user;
+    }
+
+    private void delete() throws SQLException {
+        Connection connection = dataSource.getConnection();
+
+        PreparedStatement preparedStatement =
+                connection.prepareStatement("delete from users");
+
+        preparedStatement.executeUpdate();
+
+        preparedStatement.close();
+        connection.close();
     }
 
 //    protected abstract Connection getConnection() throws SQLException, ClassNotFoundException;
