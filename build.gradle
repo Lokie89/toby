@@ -14,7 +14,8 @@ repositories {
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile group: 'org.springframework', name: 'spring-test', version: '4.2.9.RELEASE'
-    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.46'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.4' +
+            '6'
     // Configuration, Bean Annotation 사용
     // ApplicationContext Class 사용
     compile group: 'org.springframework', name: 'spring-context', version: '5.2.2.RELEASE'

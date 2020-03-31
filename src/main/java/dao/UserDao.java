@@ -16,10 +16,6 @@ public /*abstract*/ class UserDao {
 
     private static UserDao INSTANCE;
 
-//    public UserDao(ConnectionMaker connectionMaker) {
-//        this.connectionMaker = connectionMaker;
-//    }
-
     private UserDao(ConnectionMaker connectionMaker) {
         this.connectionMaker = connectionMaker;
     }
