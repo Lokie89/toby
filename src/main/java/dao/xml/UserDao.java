@@ -67,33 +67,105 @@ public class UserDao {
         return user;
     }
 
+//    public void deleteAll() throws SQLException {
+//        Connection connection = dataSource.getConnection();
+//
+//        PreparedStatement preparedStatement =
+//                connection.prepareStatement("delete from users");
+//
+//        preparedStatement.executeUpdate();
+//
+//        preparedStatement.close();
+//        connection.close();
+//    }
+
     public void deleteAll() throws SQLException {
-        Connection connection = dataSource.getConnection();
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            connection = dataSource.getConnection();
 
-        PreparedStatement preparedStatement =
-                connection.prepareStatement("delete from users");
+//            preparedStatement =
+//                    connection.prepareStatement("delete from users");
+            StatementStrategy statementStrategy = new DeleteAllStatement();
+            preparedStatement = statementStrategy.makePreparedStatement(connection);
+            preparedStatement.executeUpdate();
 
-        preparedStatement.executeUpdate();
 
-        preparedStatement.close();
-        connection.close();
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
+
+                }
+            }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+
+                }
+            }
+        }
     }
 
+//    public int getCount() throws SQLException {
+//        Connection connection = dataSource.getConnection();
+//
+//        PreparedStatement preparedStatement =
+//                connection.prepareStatement("select count(id) from users");
+//
+//        ResultSet resultSet = preparedStatement.executeQuery();
+//        resultSet.next();
+//        int count = resultSet.getInt(1);
+//
+//        preparedStatement.close();
+//        connection.close();
+//        return count;
+//    }
+
     public int getCount() throws SQLException {
-        Connection connection = dataSource.getConnection();
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            connection = dataSource.getConnection();
+            preparedStatement =
+                    connection.prepareStatement("select count(id) from users");
+            resultSet = preparedStatement.executeQuery();
+            resultSet.next();
+            return resultSet.getInt(1);
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (resultSet != null) {
+                try {
+                    resultSet.close();
+                } catch (SQLException e) {
 
-        PreparedStatement preparedStatement =
-                connection.prepareStatement("select count(id) from users");
+                }
+            }
+            if (preparedStatement != null) {
+                try {
+                    preparedStatement.close();
+                } catch (SQLException e) {
 
-        ResultSet resultSet = preparedStatement.executeQuery();
-        resultSet.next();
-        int count = resultSet.getInt(1);
+                }
+            }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
 
-        preparedStatement.close();
-        connection.close();
-        return count;
+                }
+            }
+        }
     }
 
 //    protected abstract Connection getConnection() throws SQLException, ClassNotFoundException;
+
 
 }
