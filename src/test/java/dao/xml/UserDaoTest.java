@@ -7,13 +7,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.sql.DataSource;
 import java.sql.SQLException;
+import java.util.List;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/daoxml/test_applicationContext.xml")
@@ -77,5 +75,39 @@ public class UserDaoTest {
         Assert.assertEquals(dao.getCount(), 0);
 
         dao.get("unknown_id");
+    }
+
+    @Test
+    public void getAll() throws SQLException {
+
+        User user1 = new User("gyumee", "박성철", "springno1");
+        User user2 = new User("leegw700", "이길원", "springno2");
+        User user3 = new User("bumjin", "박에이", "springno3");
+        dao.deleteAll();
+
+        dao.add(user1);
+        List<User> users1 = dao.getAll();
+        Assert.assertEquals(users1.size(), 1);
+        checkSameUser(user1, users1.get(0));
+
+        dao.add(user2);
+        List<User> users2 = dao.getAll();
+        Assert.assertEquals(users2.size(), 2);
+        checkSameUser(user1, users2.get(0));
+        checkSameUser(user2, users2.get(1));
+
+        dao.add(user3);
+        List<User> users3 = dao.getAll();
+        Assert.assertEquals(users3.size(), 3);
+        checkSameUser(user3, users3.get(0));
+        checkSameUser(user1, users3.get(1));
+        checkSameUser(user2, users3.get(2));
+
+    }
+
+    private void checkSameUser(User user1, User user2) {
+        Assert.assertEquals(user1.getId(), user2.getId());
+        Assert.assertEquals(user1.getName(), user2.getName());
+        Assert.assertEquals(user1.getPassword(), user2.getPassword());
     }
 }
