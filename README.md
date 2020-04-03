@@ -293,13 +293,9 @@ public class UserDao {
 ###### queryForObject()
     
     
-```diff
-- 언제나 네거티브 테스트를 먼저 작성할 것!
-```
-<div class="bg-red-light">
-언제나 네거티브 테스트를 먼저 작성할 것!
-</div>
-    
+
+[#1589F0] 언제나 네거티브 테스트를 먼저 작성할 것! `#1589F0`
+
 ## 4. 예외
 ## 5. 서비스추상화
 ## 6. AOP
