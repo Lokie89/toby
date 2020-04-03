@@ -1,13 +1,11 @@
 package dao.xml;
 
+import com.mysql.jdbc.MysqlErrorNumbers;
 import dao.User;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -32,7 +30,7 @@ public class UserDao {
 //    private DataSource dataSource;
 //    private ConnectionMaker connectionMaker;
 
-//    private JdbcContext jdbcContext;
+    private JdbcContext jdbcContext;
 
 //    public void setJdbcContext(JdbcContext jdbcContext) {
 //        this.jdbcContext = jdbcContext;
@@ -69,10 +67,34 @@ public class UserDao {
 //        jdbcContext.workWithStatementStrategy(stmt);
 //    }
 
-    public void add(User user) throws SQLException {
-//        this.jdbcContext.executeSql(user,"insert into users(id, name, password) values(?, ?, ?)");
-        this.jdbcTemplate.update("insert into users(id, name, password) values(?, ?, ?)",
-                user.getId(), user.getName(), user.getPassword());
+//    public void add(User user) /*throws SQLException*/ {
+////        this.jdbcContext.executeSql(user,"insert into users(id, name, password) values(?, ?, ?)");
+//        this.jdbcTemplate.update("insert into users(id, name, password) values(?, ?, ?)",
+//                user.getId(), user.getName(), user.getPassword());
+//    }
+
+//    public void add(User user) throws DuplicateUserIdException {
+//        try {
+//            this.jdbcContext.executeSql(user, "insert into users(id, name, password) values(?, ?, ?)");
+//        } catch (SQLException e) {
+//            if (e.getErrorCode() == MysqlErrorNumbers.ER_DUP_ENTRY) {
+//                throw new DuplicateUserIdException(e); // 예외 전환
+//            } else {
+//                throw new RuntimeException(e); // 예외 포장
+//            }
+//        }
+//    }
+
+    public void add(User user) throws DuplicateUserIdException {
+        try {
+            this.jdbcContext.executeSql(user, "insert into users(id, name, password) values(?, ?, ?)");
+        } catch (SQLException e) {
+            if (e.getErrorCode() == MysqlErrorNumbers.ER_DUP_ENTRY) {
+                throw new DuplicateUserIdException(e); // 예외 전환
+            } else {
+                throw new RuntimeException(e); // 예외 포장
+            }
+        }
     }
 
 //    public User get(String id) throws SQLException {
@@ -107,7 +129,17 @@ public class UserDao {
 
     public User get(String id) {
         return this.jdbcTemplate.queryForObject("select * from users where id = ? ",
-                new Object[]{id}, this.userMapper);
+                new Object[]{id},
+                new RowMapper<User>() {
+                    @Override
+                    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+                        User user = new User();
+                        user.setId(rs.getString("id"));
+                        user.setName(rs.getString("name"));
+                        user.setPassword(rs.getString("password"));
+                        return user;
+                    }
+                });
     }
 //    public void deleteAll() throws SQLException {
 //        Connection connection = dataSource.getConnection();
@@ -180,7 +212,7 @@ public class UserDao {
 //        );
 //    }
 
-    public void deleteAll() throws SQLException {
+    public void deleteAll() {
 //        this.jdbcContext.executeSql("delete from users");
         this.jdbcTemplate.update("delete from users");
     }
