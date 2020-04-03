@@ -267,9 +267,38 @@ public class DaoFactory {
     템플릿( 메소드 )에 사용할 콜백 인터페이스를 전달받아 실행
 
 #### JdbcTemplate
+    스프링이 제공하는 JDBC 코드용 기본 템플릿
+
+###### update()
+```java
+public class UserDao {
+    // PreparedStatementCreator 를 매개변수로 받음
+    public void deleteAll() throws SQLException{
+        this.jdbcTemplate.update(
+                new PreparedStatementCreator() {
+                    @Override
+                    public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                        return con.prepareStatement("delete from users");
+                    }
+                }
+        );
+    }
+    // SQL 문을 매개변수로 받음
+    public void deleteAll() throws SQLException {
+        this.jdbcTemplate.update("delete from users");
+    }
+
+}
+```
+###### queryForObject()
     
     
-###### 언제나 네거티브 테스트를 먼저 작성할 것!
+```diff
+- 언제나 네거티브 테스트를 먼저 작성할 것!
+```
+<div class="bg-red-light">
+언제나 네거티브 테스트를 먼저 작성할 것!
+</div>
     
 ## 4. 예외
 ## 5. 서비스추상화

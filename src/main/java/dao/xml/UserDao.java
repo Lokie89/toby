@@ -2,9 +2,12 @@ package dao.xml;
 
 import dao.User;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -164,6 +167,17 @@ public class UserDao {
 //            }
 //        };
 //        jdbcContext.workWithStatementStrategy(stmt);
+//    }
+
+//    public void deleteAll() throws SQLException{
+//        this.jdbcTemplate.update(
+//                new PreparedStatementCreator() {
+//                    @Override
+//                    public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+//                        return con.prepareStatement("delete from users");
+//                    }
+//                }
+//        );
 //    }
 
     public void deleteAll() throws SQLException {
