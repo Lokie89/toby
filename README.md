@@ -578,7 +578,114 @@ public class DaoTest{
     트랜잭션 동기화
         트랜잭션을 시작하기 위해 만든 Connection 오브젝트를 특별한 저장소에 보관해두고
         호출되는 DAO 의 메소드에서 저장된 Connection을 가져다가 사용하게 하는 것
+        
+###### 스프링이 제공하는 트랜잭션 동기화
+    트랜잭션 동기화 작업 초기화
+    TransactionSynchronizationManager.initSynchronization();
+    
+    DataSourceUtils.getConnection(dataSource); 를 통해
+    DB Connection 생성
+    DataSource에서 직접 가져오지 않고 DataSourceUtils 를 이용 하는 이유는
+    Connection 오브젝트 뿐만 아니라 트랜잭션 동기화에 사용하도록 저장소에 바인딩 ??
+    
+    예외가 발생하지 않으면 c.commit();
+    예외 발생 시 c.rollback(); throw e;
+    
+    마지막으로 커넥션을 닫고 동기화 작업 중단 
+    DataSourceUtils.releaseConnection(c, dataSource);
+    TransactionSynchronizationManager.unbindResource(this.dataSource);
+    TransactionSynchronizationManager.clearSynchronization();
+    
+```java
+public class Transaction{
+    public void upgradeLevels() throws Exception {
+            TransactionSynchronizationManager.initSynchronization();
+            Connection c = DataSourceUtils.getConnection(dataSource);
+            c.setAutoCommit(false);
+    
+            try {
+                List<User> userList = userDao.getAll();
+                for (User user : userList) {
+                    if (canUpgradeLevel(user)) {
+                        upgradeLevel(user);
+                    }
+                }
+                c.commit();
+            } catch (Exception e) {
+                c.rollback();
+                throw e;
+            } finally {
+                DataSourceUtils.releaseConnection(c, dataSource);
+                TransactionSynchronizationManager.unbindResource(this.dataSource);
+                TransactionSynchronizationManager.clearSynchronization();
+            }
+        }
+}
+```
+
+###### 글로벌 트랜잭션
+    한 Connection 만 컨트롤 하는 로컬 트랜잭션으로는
+    한 트랜잭션에서 여러 DB ( Connection ) 을 사용하는 로직에서는 사용할 수가 없다.
+    자바는 JDBC 외에 글로벌 트랜잭션을 지원하는 JTA 를 제공하고 있다 
+    그러나 사용할 DB에 따른 트랜잭션 관리 코드가 다를 수 있다는 점이다. // ★ 3.1 5장 369p
+    
+    그래서 스프링에서는 트랜잭션의 경계 설정을 담당하는 코드의 패턴을 추상화 시킨
+    FlatformTransactionManager 를 구현한 DataSourceTransactionManager 사용
+    
+```java
+public class Transaction {
+    public void upgradeLevels() throws Exception {
+        PlatformTransactionManager transactionManager =
+                new DataSourceTransactionManager(dataSource);
+
+        TransactionStatus status =
+                transactionManager.getTransaction(new DefaultTransactionDefinition());
+        try {
+            List<User> userList = userDao.getAll();
+            for (User user : userList) {
+                if (canUpgradeLevel(user)) {
+                    upgradeLevel(user);
+                }
+            }
+            transactionManager.commit(status);
+        } catch (RuntimeException e) {
+            transactionManager.rollback(status);
+            throw e;
+        }
+
+    }
+}
+```
+    만약 JTA를 이용하는 글로벌 트랜잭션으로 변경한다면
+    PlatformTransactionManager 를 JTATransactionManager로 구현
+    Hibernate를 이용한다면 HibernateTransactionManager
+    JPA를 이용한다면 JPATransactionManager 로 구현하면 된다.
+    
+#### 단일 책임 원칙
+    Single Responsibility Principle
+    하나의 모듈은 한 가지 책임을 가져야 한다.
+    
+    단일 책임 원칙을 잘 지키고 있다면, 어떤 변경이 필요할 때 수정 대상이 명확해진다.
+    기술이 바뀌면 기술계층과의 연동을 담당하는 기술 추상화 계층의 설정만 바꿔주면 된다.
+    
+#### 테스트 대역의 종류와 특징
+    테스트 대역 ( test double )
+        테스트 환경을 만들어주기 위해 테스트 대상이 되는 오브젝트의 기능에만 충실하게
+        수행하면서 빠르게, 자주 테스트를 실행할 수 있도록 사용하는 오브젝트
+    테스트 스텁 ( test stub )
+        테스트 대상 오브젝트의 의존객체로서 존재하면서 테스트 동안에 코드가 
+        정상적으로 수행할 수 있도록 돕는 것
+    목 오브젝트 ( mock object )
+        스텁처럼 테스트 오브젝트가 정상적으로 실행되도록 도와주면서, 
+        테스트 오브젝트와 자신의 사이에서 일어나는 커뮤니케이션 내용을 저장해뒀다가
+        테스트 결과를 검증하는 데 활용
+    목 오브젝트 테스트
+        보통의 테스트 방법으로는 검증하기 까다로운 테스트 대상 오브젝트의 내부에서
+        일어나는 일이나 다른 오브젝트 사이에서 주고받는 정보까지 검증하는 일이 손쉬움
+    
 ## 6. AOP
+    Aspect Oriented Programming
+    관점 지향 프로그래밍 
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기

@@ -15,8 +15,22 @@
     <bean id="eventUserLevelUpgradePolicy" class="dao.independent.EventUserLevelUpgradePolicy">
         <constructor-arg ref="userDao"/>
     </bean>
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <constructor-arg ref="dataSource"/>
+    </bean>
+
+<!--    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">-->
+<!--        <property name="host" value="mail.server.com"/>-->
+    <bean id="mailSender" class="dao.independent.DummyMailSender">
+    </bean>
+
     <bean id="userService" class="dao.independent.UserService">
         <property name="userDao" ref="userDao"/>
+        <property name="dataSource" ref="dataSource"/>
         <property name="userLevelUpgradePolicy" ref="eventUserLevelUpgradePolicy"/>
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="mailSender" ref="mailSender"/>
     </bean>
+
 </beans>

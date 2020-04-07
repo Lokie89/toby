@@ -8,6 +8,7 @@ public class User {
     Level level;
     int login;
     int recommend;
+    String email;
 
     public User() {
     }
@@ -83,6 +84,10 @@ public class User {
         } else {
             this.level = nextLevel;
         }
+    }
+
+    public String getEmail() {
+        return email;
     }
 
 }

@@ -3,32 +3,42 @@ package independent;
 
 import dao.Level;
 import dao.User;
-import dao.independent.TestUserService;
-import dao.independent.TestUserServiceException;
-import dao.independent.UserDao;
-import dao.independent.UserService;
+import dao.independent.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.internal.runners.statements.Fail;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailSender;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.transaction.PlatformTransactionManager;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.fail;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/daoxml/independent_applicationContext.xml")
 public class UserServiceTest {
 
     @Autowired
+    MailSender mailSender;
+
+    @Autowired
+    DataSource dataSource;
+
+    @Autowired
     UserService userService;
 
     @Autowired
     UserDao userDao;
+
+    @Autowired
+    PlatformTransactionManager transactionManager;
 
     List<User> userList;
 
@@ -44,11 +54,15 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeLevels() {
+    @DirtiesContext
+    public void upgradeLevels() throws Exception {
         userDao.deleteAll();
         for (User user : userList) {
             userDao.add(user);
         }
+
+        MockMailSender mockMailSender = new MockMailSender();
+        userService.setMailSender(mockMailSender);
 
         userService.upgradeLevels();
 
@@ -58,11 +72,16 @@ public class UserServiceTest {
 //        checkLevel(userList.get(3), Level.GOLD);
 //        checkLevel(userList.get(4), Level.GOLD);
 
-        checkLevelUpgraded(userList.get(0), true);
+        checkLevelUpgraded(userList.get(0), false);
         checkLevelUpgraded(userList.get(1), true);
-        checkLevelUpgraded(userList.get(2), true);
+        checkLevelUpgraded(userList.get(2), false);
         checkLevelUpgraded(userList.get(3), true);
         checkLevelUpgraded(userList.get(4), false);
+
+        List<String> request = mockMailSender.getRequests();
+        Assert.assertEquals(request.size(), 2);
+        Assert.assertEquals(request.get(0), userList.get(1).getEmail());
+        Assert.assertEquals(request.get(1), userList.get(3).getEmail());
     }
 
     @Test
@@ -102,14 +121,16 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeAllOrNothing() {
+    public void upgradeAllOrNothing() throws Exception {
         UserService testUserService = new TestUserService(userList.get(3).getId());
         testUserService.setUserDao(this.userDao);
+        testUserService.setDataSource(this.dataSource);
+        testUserService.setTransactionManager(this.transactionManager);
+        testUserService.setMailSender(this.mailSender);
         userDao.deleteAll();
         for (User user : userList) {
             userDao.add(user);
         }
-
         try {
             testUserService.upgradeLevels();
             fail();
