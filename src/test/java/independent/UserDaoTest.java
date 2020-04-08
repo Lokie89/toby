@@ -3,7 +3,6 @@ package independent;
 import dao.Level;
 import dao.User;
 import dao.independent.UserDao;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,8 +12,9 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.sql.DataSource;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/daoxml/independent_applicationContext.xml")
@@ -31,12 +31,12 @@ public class UserDaoTest {
     User user3;
 
     private void checkSameUser(User user1, User user2) {
-        Assert.assertEquals(user1.getId(), user2.getId());
-        Assert.assertEquals(user1.getName(), user2.getName());
-        Assert.assertEquals(user1.getPassword(), user2.getPassword());
-        Assert.assertEquals(user1.getLevel(), user2.getLevel());
-        Assert.assertEquals(user1.getLogin(), user2.getLogin());
-        Assert.assertEquals(user1.getRecommend(), user2.getRecommend());
+        assertEquals(user1.getId(), user2.getId());
+        assertEquals(user1.getName(), user2.getName());
+        assertEquals(user1.getPassword(), user2.getPassword());
+        assertEquals(user1.getLevel(), user2.getLevel());
+        assertEquals(user1.getLogin(), user2.getLogin());
+        assertEquals(user1.getRecommend(), user2.getRecommend());
     }
 
     @Before
@@ -50,7 +50,7 @@ public class UserDaoTest {
     public void addAndGet() {
 
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.add(user1);
         dao.add(user2);
@@ -66,19 +66,19 @@ public class UserDaoTest {
     @Test
     public void count() {
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.add(user1);
-        Assert.assertEquals(dao.getCount(), 1);
+        assertEquals(dao.getCount(), 1);
         dao.add(user2);
-        Assert.assertEquals(dao.getCount(), 2);
+        assertEquals(dao.getCount(), 2);
     }
 
     @Test(expected = EmptyResultDataAccessException.class)
     public void getUserFailure() {
 
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.get("unknown_id");
     }
@@ -90,18 +90,18 @@ public class UserDaoTest {
 
         dao.add(user1);
         List<User> users1 = dao.getAll();
-        Assert.assertEquals(users1.size(), 1);
+        assertEquals(users1.size(), 1);
         checkSameUser(user1, users1.get(0));
 
         dao.add(user2);
         List<User> users2 = dao.getAll();
-        Assert.assertEquals(users2.size(), 2);
+        assertEquals(users2.size(), 2);
         checkSameUser(user1, users2.get(0));
         checkSameUser(user2, users2.get(1));
 
         dao.add(user3);
         List<User> users3 = dao.getAll();
-        Assert.assertEquals(users3.size(), 3);
+        assertEquals(users3.size(), 3);
         checkSameUser(user3, users3.get(0));
         checkSameUser(user1, users3.get(1));
         checkSameUser(user2, users3.get(2));
@@ -147,7 +147,7 @@ public class UserDaoTest {
 //            SQLException sqlException = (SQLException) ex.getRootCause();
 //            SQLExceptionTranslator set =
 //                    new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
-//            Assert.assertEquals(set.translate(null, null, sqlException), DuplicateKeyException.class);
+//            assertEquals(set.translate(null, null, sqlException), DuplicateKeyException.class);
 //        }
 //    }
 }

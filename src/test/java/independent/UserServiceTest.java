@@ -19,7 +19,7 @@ import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/daoxml/independent_applicationContext.xml")
@@ -79,9 +79,9 @@ public class UserServiceTest {
         checkLevelUpgraded(userList.get(4), false);
 
         List<String> request = mockMailSender.getRequests();
-        Assert.assertEquals(request.size(), 2);
-        Assert.assertEquals(request.get(0), userList.get(1).getEmail());
-        Assert.assertEquals(request.get(1), userList.get(3).getEmail());
+        assertEquals(request.size(), 2);
+        assertEquals(request.get(0), userList.get(1).getEmail());
+        assertEquals(request.get(1), userList.get(3).getEmail());
     }
 
     @Test
@@ -97,20 +97,20 @@ public class UserServiceTest {
         User userWithLevelRead = userDao.get(userWithLevel.getId());
         User userWithOutLevelRead = userDao.get(userWithoutLevel.getId());
 
-        Assert.assertEquals(userWithLevelRead.getLevel(), userWithLevel.getLevel());
-        Assert.assertEquals(userWithOutLevelRead.getLevel(), userWithoutLevel.getLevel());
+        assertEquals(userWithLevelRead.getLevel(), userWithLevel.getLevel());
+        assertEquals(userWithOutLevelRead.getLevel(), userWithoutLevel.getLevel());
     }
 
     //    private void checkLevel(User user, Level expectedLevel) {
 //        User userUpdate = userDao.get(user.getId());
-//        Assert.assertEquals(userUpdate.getLevel(), expectedLevel);
+//        assertEquals(userUpdate.getLevel(), expectedLevel);
 //    }
     private void checkLevelUpgraded(User user, boolean upgraded) {
         User userUpdate = userDao.get(user.getId());
         if (upgraded) {
-            Assert.assertEquals(userUpdate.getLevel(), user.getLevel().nextLevel());
+            assertEquals(userUpdate.getLevel(), user.getLevel().nextLevel());
         } else {
-            Assert.assertEquals(userUpdate.getLevel(), user.getLevel());
+            assertEquals(userUpdate.getLevel(), user.getLevel());
         }
     }
 

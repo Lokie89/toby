@@ -1,7 +1,6 @@
 package dao.xml;
 
 import dao.User;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,6 +11,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.sql.SQLException;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/daoxml/test_applicationContext.xml")
@@ -41,18 +42,18 @@ public class UserDaoTest {
         User user2 = new User("leegw700", "이길원", "springno2");
 
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.add(user1);
         dao.add(user2);
 
         User getUser1 = dao.get(user1.getId());
-        Assert.assertEquals(getUser1.getName(), user1.getName());
-        Assert.assertEquals(getUser1.getPassword(), user1.getPassword());
+        assertEquals(getUser1.getName(), user1.getName());
+        assertEquals(getUser1.getPassword(), user1.getPassword());
 
         User getUser2 = dao.get(user2.getId());
-        Assert.assertEquals(getUser2.getName(), user2.getName());
-        Assert.assertEquals(getUser2.getPassword(), user2.getPassword());
+        assertEquals(getUser2.getName(), user2.getName());
+        assertEquals(getUser2.getPassword(), user2.getPassword());
     }
 
     @Test
@@ -60,19 +61,19 @@ public class UserDaoTest {
         User user1 = new User("gyumee", "박성철", "springno1");
         User user2 = new User("leegw700", "이길원", "springno2");
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.add(user1);
-        Assert.assertEquals(dao.getCount(), 1);
+        assertEquals(dao.getCount(), 1);
         dao.add(user2);
-        Assert.assertEquals(dao.getCount(), 2);
+        assertEquals(dao.getCount(), 2);
     }
 
     @Test(expected = EmptyResultDataAccessException.class)
     public void getUserFailure() throws SQLException {
 
         dao.deleteAll();
-        Assert.assertEquals(dao.getCount(), 0);
+        assertEquals(dao.getCount(), 0);
 
         dao.get("unknown_id");
     }
@@ -87,18 +88,18 @@ public class UserDaoTest {
 
         dao.add(user1);
         List<User> users1 = dao.getAll();
-        Assert.assertEquals(users1.size(), 1);
+        assertEquals(users1.size(), 1);
         checkSameUser(user1, users1.get(0));
 
         dao.add(user2);
         List<User> users2 = dao.getAll();
-        Assert.assertEquals(users2.size(), 2);
+        assertEquals(users2.size(), 2);
         checkSameUser(user1, users2.get(0));
         checkSameUser(user2, users2.get(1));
 
         dao.add(user3);
         List<User> users3 = dao.getAll();
-        Assert.assertEquals(users3.size(), 3);
+        assertEquals(users3.size(), 3);
         checkSameUser(user3, users3.get(0));
         checkSameUser(user1, users3.get(1));
         checkSameUser(user2, users3.get(2));
@@ -106,8 +107,8 @@ public class UserDaoTest {
     }
 
     private void checkSameUser(User user1, User user2) {
-        Assert.assertEquals(user1.getId(), user2.getId());
-        Assert.assertEquals(user1.getName(), user2.getName());
-        Assert.assertEquals(user1.getPassword(), user2.getPassword());
+        assertEquals(user1.getId(), user2.getId());
+        assertEquals(user1.getName(), user2.getName());
+        assertEquals(user1.getPassword(), user2.getPassword());
     }
 }

@@ -685,7 +685,93 @@ public class Transaction {
     
 ## 6. AOP
     Aspect Oriented Programming
-    관점 지향 프로그래밍 
+    관점 지향 프로그래밍
+    
+#### 테스트 메소드 작성
+    테스트 메소드 작성시 의존관계가 깊은, 많은 오브젝트들을 제외하는 것이 좋다.
+    왜냐 간단한 테스트 실행시에도 필요한 모든 의존도를 설정해야 하니까
+    예를들어 DB에서 데이터 하나 가져오는 동안
+    DataSource, JDBCTemplate, Dao 등 여러가지의 의존관계를 설정해줘야함
+    그리고 테스트 시간 자체도 더 오래걸림
+    그래서 고립된 테스트가 가능하도록 Mock 오브젝트를 만듬
+    
+    이때 의존관계 설정을 해놓은 interface 의 메소드를 구현하고
+    Mock 필드 메소드를 작성 ( 테스트에 사용하지 않을 메소드는 throw Exception 시킴 )
+    
+    가이드라인
+        - 항상 단위 테스트를 먼저 고려한다.
+        - 테스트 대역을 이용하여 테스트를 만든다.
+        - 외부 리소스를 사용해야만 가능한 테스트는 통합 테스트로 만든다.
+        - DAO 테스트는 DB라는 외부 리소스를 사용하기 때문에 통합 테스트로 분류
+        - 여러 개의 단위가 의존관계를 가지고 동작할 때를 위한 통합 테스트가 필요
+        - 스프링 테스트 컨텍스트 프레임워크를 이용하는 것도 통합 테스트
+      
+    Mock 프레임워크
+        목 오브젝트를 편리하게 작성하도록 도와주는 프레임워크
+        
+    Mockito
+        1. 인터페이스를 이용해 목 오브젝트를 만든다.
+        2. 목 오브젝트가 리턴할 값이 있으면 이를 지정해준다.
+           메소드가 호출되면 예외를 강제로 던지게 만들 수도 있다.
+        3. 테스트 대상 오브젝트에 DI 해서목 오브젝트가 테스트 중에 사용되도록 만든다.
+        4. 테스트 대상 오브젝트를 사용한 후에 목 오브젝트의 특정 메소드가 호출 됐는지
+           어떤 값을 가지고 몇 번 호출됐는지를 검증한다.
+           
+```java
+
+import static org.mockito.Mockito.*;
+
+public class UserServiceTest {
+    @Test
+    public void mockUpgradeLevels() throws Exception {
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        // 다이나믹한 목 오브젝트 생성과 메소드의 리턴 값, DI 설정
+        UserDao mockUserDao = mock(UserDao.class);
+        when(mockUserDao.getAll()).thenReturn(this.userList);
+        userServiceImpl.setUserDao(mockUserDao);
+        
+        // 리턴 값이 없는 메소드를 가진 목 오브젝트는 더욱 간단함
+        MailSender mockMailSender = mock(MailSender.class);
+        userServiceImpl.setMailSender(mockMailSender);
+
+        userServiceImpl.upgradeLevels();
+
+        // times() : 메소드 호출 횟수 검증
+        // any() : 파라미터 무시 호출 횟수만 확인
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao).update(userList.get(1));
+        Assert.assertEquals(userList.get(1).getLevel(),Level.SILVER);
+        verify(mockUserDao).update(userList.get(3));
+        Assert.assertEquals(userList.get(3).getLevel(),Level.GOLD);
+
+        // ArgumentCaptor 는 오브젝트에 전달된 파라미터를 가져와 내용을 검증할때 유용 
+        ArgumentCaptor<SimpleMailMessage> mailMessageArg =
+                ArgumentCaptor.forClass(SimpleMailMessage.class);
+
+        verify(mockMailSender,times(2)).send(mailMessageArg.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+        Assert.assertEquals(mailMessages.get(0).getTo()[0],userList.get(1).getEmail());
+        Assert.assertEquals(mailMessages.get(1).getTo()[0],userList.get(3).getEmail());
+    }
+}
+```
+#### 다이나믹 프록시와 팩토리 빈
+
+###### 프록시
+    확장성을 고려해서 한 가지 기능을 분리한다면 전략패턴을 사용하면 된다.
+    
+    부가적인 기능을 위임을 통해 외부로 분리했을 때
+    구체적인 구현 코드는 제거했을지라도 위임을 통해 
+    기능을 사용하는 코드는 핵심 코드와 함께 남아있다.
+    
+    이렇게 분리된 부가기능을 담은 클래스는 중요한 특징이 있다.
+    부가기능 외의 나머지 모든 기능은 원래 핵심기능을 가진 클래스로 위임해줘야 한다.
+    핵심기능은 부가기능을 가진 클래스의 존재 자체를 모른다.
+    따라서 부가기능이 핵심기능을 사용하는 구조가 되는 것이다.
+    
+     
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기
