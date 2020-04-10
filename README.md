@@ -771,7 +771,155 @@ public class UserServiceTest {
     핵심기능은 부가기능을 가진 클래스의 존재 자체를 모른다.
     따라서 부가기능이 핵심기능을 사용하는 구조가 되는 것이다.
     
-     
+    부가기능 코드에서는 핵심기능으로 요처을 위임해주는 과정에서 자신이 가진
+    부가적인 기능을 적용해줄 수 있다.
+    
+    이렇게 마치 자신이 클라이언트가 사용하려고 하는 실제 대상인 것처럼 위장해서
+    클라이언트의 요청을 받아주는 것을 대리자, 대리인 역할을 하는 프록시 라고 한다.
+    
+    프록시는 사용목적에 따라 두 가지로 구분할 수 있다.
+    1. 클라이언트가 타깃에 접근하는 방법을 제어하기 위함.
+    2. 타깃에 부가적인 기능을 부여해주기 위함
+
+###### 데코레이터 패턴
+    타깃에 부가적인 기능을 런타임 시 다이나믹하게 부여해주기 위해 프록시를 사용하는 패턴
+    
+    데코레이터라 불리는 이유는 마치 제품이나 케익 등을 여러 겹으로 포장하고
+    그 위에 장식을 붙이는 것처럼 실제 내용물은 동일하지만
+    부가적인 효과를 부여해줄 수 있기 때문이다.
+    
+    데코레이터 패턴은 인터페이스를 통해 위임하는 방식이기 때문에
+    어느 데코레이터에서 타깃으로 연결될지 코드 레벨에선 미리 알 수 없다.
+
+```java
+public class HelloTarget implements Hello {
+    @Override
+    public String sayHello(String name) {
+        return "Hello " + name;
+    }
+
+    @Override
+    public String sayHi(String name) {
+        return "Hi " + name;
+    }
+
+    @Override
+    public String sayThankYou(String name) {
+        return "Thank You " + name;
+    }
+}
+```
+###### 프록시 패턴
+    타깃에 대한 접근 방법을 제어하려는 목적으로 사용하는 패턴
+    
+    클라이언트에게 타깃에 대한 레퍼런스를 넘겨야 할때, 
+    실제 타깃 오브젝트를 만드는 것 대신 프록시를 넘겨준다.
+    그리고 프록시의 메소드를 통해 타깃을 사용하려고 시도할때, 
+    프록시가 타깃 오브젝트를 생성하고 요청을 위임해준다.
+    
+    또는 특정 상황에서 타깃에 대한 접근권한을 제어하기 위해 사용하기도 한다.
+    특정 메소드를 사용하려고 하면 접근이 불가능하다는 예외를 발생시킨다.
+
+```java
+public class HelloUppercase implements Hello {
+
+    Hello hello;
+
+    public HelloUppercase(Hello hello) {
+        this.hello = hello;
+    }
+
+    @Override
+    public String sayHello(String name) {
+        return hello.sayHello(name).toUpperCase();
+    }
+
+    @Override
+    public String sayHi(String name) {
+        return hello.sayHi(name).toUpperCase();
+    }
+
+    @Override
+    public String sayThankYou(String name) {
+        return hello.sayThankYou(name).toUpperCase();
+    }
+}
+```
+###### 다이나믹 프록시
+
+    프록시를 만들기 번거로운 이유
+    1. 타깃의 인터페이스를 구현하고 위임하는 코드를 작성하는 것
+       메소드가 많고 다양해지면 부담스러워 지기도 하며, 타깃 인터페이스의 메소드가
+       변경되었을 시 모두 수정해줘야 함
+    2. 부가기능 코드가 중복될 가능성이 많다는 점
+    
+    프록시 패턴의 단점은 매번 프록시를 만드는 것이 번거롭다는 점
+    기능 확장, 접근 방법 제어를 위해 매번 클래스를 정의해야 하고, 
+    인터페이스의 구현해야 할 메소드는 일일히 구현해서 위임하는 코드를 넣어줘야 하기 때문
+    
+    그래서 자바는 java.lang.reflect 패키지 안에 
+    프록시를 손쉽게 만들 수 있도록 하는 클래스를 지원해준다.
+    
+```java
+public class Proxy {
+    public static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h) {
+        Objects.requireNonNull(h);
+        Class<?> caller = System.getSecurityManager() == null ? null : Reflection.getCallerClass();
+        Constructor<?> cons = getProxyConstructor(caller, loader, interfaces);
+        return newProxyInstance(caller, cons, h);
+    }
+}
+
+public class HelloTargetTest {
+    public void dynamicProxyPattern() {
+        Hello proxiedHello = (Hello) Proxy.newProxyInstance(
+                getClass().getClassLoader(), // 클래스 로더 제공 다이나믹 프록시가 정의되는 클래스 로더 지정
+                new Class[]{Hello.class}, // 다이나믹 프록시가 구현해야 할 인터페이스
+                new UppercaseHandler(new HelloTarget()) // 부가기능과 위임관련 코드를 담고있는 InvocationHandler 구현 오브젝트
+        );
+    }
+}
+```
+       
+###### 리플렉션
+    자바의 코드 자체를 추상화해서 접근하도록 만든것
+    
+    자바의 모든 클래스는 그 클래스 자체의 구성정보를 담은 Class 타입의 오브젝트를 갖고 있다.
+    클래스이름.class 또는 오브젝트.getClass() 를 통하여 Class 타입의 오브젝트를 가져올 수 있다.
+    이 오브젝트를 통해 클래스의 이름, 필드, 이름, 상속, 인터페이스 등 메타정보를 가져올 수 있다.
+    e.g) 메소드 정보 추출
+    Method lengthMethod = String.class.getMethod("length");
+    메소드 사용 ( invoke() )
+    int length = lengthMethod.invoke(name);
+    
+###### 다이나믹 프록시 확장
+```java
+public class UppercaseHandler implements InvocationHandler {
+
+//    Hello target;
+    Object target;
+
+    public UppercaseHandler(/*Hello target*/Object target) {
+        this.target = target;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+//        String ret = (String) method.invoke(target, args); // 타깃으로 위임, 인터페이스의 모든 메소드 호출에 적용
+//        return ret.toUpperCase(); // 부가기능
+
+        Object ret = method.invoke(target, args);
+        // String 일 경우에만 대문자로 변환 ( return 타입이 Integer 인 인터페이스 메소드가 추가 되더라도 영향이 없도록
+        // method 의 이름이 say 시작할 경우에만
+        if (ret instanceof String && method.getName().startsWith("say")) {
+            return ((String) ret).toUpperCase();
+        } else {
+            return ret;
+        }
+    }
+}
+```
+
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기
