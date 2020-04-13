@@ -1124,7 +1124,7 @@ public class DynamicProxyTest {
     MethodInterceptor 오브젝트는 여러 프록시가 공유해서 사용할 수 있기 때문에
     MethodInterceptor 오브젝트는 타깃 정보를 갖고 있지 않도록 만들었다.
     그 덕분에 MethodInterceptor 를 스프링의 싱글톤 빈으로 등록할 수 있었다.
-    
+     
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기
