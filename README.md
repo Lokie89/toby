@@ -978,6 +978,153 @@ public class MessageFactoryBean implements FactoryBean<Message> {
     }
 }
 ```
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration // locations 지정하지 않으면 Class명-context.xml 로 자동 매핑됨
+public class FactoryBeanTest {
+    @Autowired
+    ApplicationContext context;
+
+    @Test
+    public void getMessageFromFactoryBean() {
+        Object message = context.getBean("message");
+        assertThat((Message) message, is(Message.class));
+        assertThat(((Message) message).getText(), is("Factory Bean"));
+    }
+
+    @Test
+    public void getFactoryBean() throws Exception {
+        Object factory = context.getBean("&message"); // &을 붙여주면 오브젝트가 아닌 팩토리 빈 자체를 리턴해줌
+        assertThat((MessageFactoryBean) factory, is(MessageFactoryBean.class));
+    }
+}
+```
+    다이나믹 프록시를 스프링의 빈으로 등록하기 위해 팩토리 빈을 사용한다.
+    팩토리 빈의 getObject() 메소드에 다이나믹 프록시 오브젝트를 만들어주는 코드를 삽입
+
+```java
+public class TxProxyFactoryBean implements FactoryBean<Object> {
+    Object target;
+    PlatformTransactionManager transactionManager;
+    String pattern;
+    Class<?> serviceInterface;
+
+    public void setPattern(String pattern) {
+        this.pattern = pattern;
+    }
+
+    public void setServiceInterface(Class<?> serviceInterface) {
+        this.serviceInterface = serviceInterface;
+    }
+
+    public void setTarget(Object target) {
+        this.target = target;
+    }
+
+    public void setTransactionManager(PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
+
+    @Override
+    public Object getObject() throws Exception {
+        TransactionHandler txHandler = new TransactionHandler();
+        txHandler.setTarget(target);
+        txHandler.setPattern(pattern);
+        txHandler.setTransactionManager(transactionManager);
+        return Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class[]{serviceInterface},
+                txHandler
+        );
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return serviceInterface;
+    }
+    
+    // 싱글톤 빈이 아니라는 뜻 getObject() 가 
+    // 매번 같은 오브젝트를 리턴 하지 않는다.
+    @Override
+    public boolean isSingleton() {
+        return false;
+    }
+}
+```
+    <bean id="userService" class="proxy.TxProxyFactoryBean">
+        <property name="target" ref="userServiceImpl"/>
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="pattern" value="upgradeLevels"/>
+        <!--Class 타입은 value 를 이용해 클래스 또는 인터페이스의 이름을 넣어주면 됨
+            스프링은 수정자 메소드의 파라미터 타입을 확인해서 프로퍼티의 타입이 Class 인 경우
+            value로 설정한 이름을 가진 Class 오브젝트로 자동 변환해준다.-->
+        <property name="serviceInterface" value="dao.service.UserService"/> 
+    </bean>
+
+###### 프록시 팩토리 빈 방식의 장점과 한계
+    장점
+    프록시 팩토리 빈의 재사용
+        TransactionHandler 를 이용하는 다이나믹 프록시를 생성해주는 TxProxyFactoryBean은
+        코드의 수정 없이도 다양한 클래스에 적용할 수 있다.
+    다이나믹 프록시를 이용하면 타깃 인터페이스를 구현하는 클래스를 일일이 만드는 번거로움 제거
+    하나의 핸들러 메소드를 구현하면 수많은 메소드에 부가기능 부여 가능, 중복 코드 사라짐
+    한계
+        부가기능 제공하는 것은 메소드 단위로 일어나는 일
+        하나의 클래스 안에 존재하는 메소드에 부가기능을 제공할 순 있지만
+        여러개의 클래스에 부가기능을 적용할 순 없다.
+        
+###### 타깃이 필요 없는 순수한 부가기능
+```java
+static class UppercaseAdvice implements MethodInterceptor {
+
+    @Override
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        String ret = (String) invocation.proceed();
+        return ret;
+    }
+
+}
+```
+    MethodInterceptor 를 구현한 uppercaseAdvice 에는 타깃 오브젝트가 등장하지 않는다.
+    MethodInvocatio 은 타깃 오브젝트의 메소드를 실행할 수 있는 기능이 있기 때문에
+    MethodInterceptor 는 부가기능을 제공하는 데만 집중할 수 있다.
+    
+    MethodInvocation 의 proceed() 메소드를 실행하면 타깃 오브젝트의 메소드를
+    내부적으로 실행해주는 기능이 있다.
+    그렇다면 MethodInvocation 구현 클래스는 일종의 공유 가능한 템플릿처럼 동작하는 것
+
+```java
+public class DynamicProxyTest {
+    @Test
+    public void proxyFactoryBean() {
+        ProxyFactoryBean pfBean = new ProxyFactoryBean();
+        pfBean.setTarget(new HelloTarget());
+        pfBean.addAdvice(new UppercaseAdvice());
+
+        Hello proxiedHello = (Hello) pfBean.getObject();
+        assertThat(proxiedHello.sayHello("Toby"), is("HELLO TOBY"));
+        assertThat(proxiedHello.sayHi("Toby"), is("HI TOBY"));
+        assertThat(proxiedHello.sayThankYou("Toby"), is("THANK YOU TOBY"));
+    }
+}
+```
+    ProxyFactoryBean 에 MethodInterceptor 를 설정해줄 때는 일반적인 DI처럼
+    수정자 메소드를 사용하는 대신 addAdvice() 라는 메소드를 사용한다.
+    addAdvice() 메소드를 통해 ProxyFactoryBean 에는 
+    여러 개의 MethodInterceptor 를 추가할 수 있다.
+
+###### 부가기능 적용 대상 메소드 선정 방법
+    TxProxyfactoryBean 은 pattern 이라는 메소드 이름 비교용 스트링 값을 DI 받아서
+    TransactionHandler 를 생성할 때 이를 넘겨주고, TransactionHandler 는 요청이
+    들어오는 메소드의 이름과 패턴을 비교해서 부가기능인 트랜잭션 적용 대상을 판별했다.
+    
+    스프링의 ProxyFactoryBean 과 MethodInterceptor 를 사용하는 방식에서는
+    메소드 선정 기능을 사용할 수 없다. 
+    MethodInterceptor 오브젝트는 여러 프록시가 공유해서 사용할 수 있기 때문에
+    MethodInterceptor 오브젝트는 타깃 정보를 갖고 있지 않도록 만들었다.
+    그 덕분에 MethodInterceptor 를 스프링의 싱글톤 빈으로 등록할 수 있었다.
+    
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기

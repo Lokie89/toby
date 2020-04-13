@@ -31,4 +31,7 @@ dependencies {
 
     // Spring Mail - MailSender, SimpleMailMessage, JavaMailSenderImpl, JavaMailSender Class 사용
     compile group: 'org.springframework', name: 'spring-context-support', version: '5.2.4.RELEASE'
+
+    compile group: 'aopalliance', name: 'aopalliance', version: '1.0'
+    compile group: 'org.springframework', name: 'spring-aop', version: '5.2.4.RELEASE'
 }
