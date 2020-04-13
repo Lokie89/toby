@@ -919,7 +919,35 @@ public class UppercaseHandler implements InvocationHandler {
     }
 }
 ```
+###### 다이나믹 프록시 팩토리 빈 적용
+    스프링의 빈은 기본적으로 클래스 이름과 프로퍼티로 정의됨
+    스프링은 지정된 클래스 이름을 가지고 리플렉션을 이용해서 해당 클래스의 오브젝트를 만듬
+    그러나 다이나믹 프록시 오브젝트의 클래스가 어떤 것인지 알 수 없다.
+    따라서 사전에 프록시 오브젝트의 크래스 정보를 미리 알아내서 스프링의 빈에 정의할 방법이 없다는 뜻이다.
+    
+    팩토리 빈
+        스프링을 대신해서 오브젝트의 생성로직은 담당하도록 만들어진 특별한 빈
+        FactoryBean 인터페이스를 구현
 
+```java
+public class Message {
+    String text;
+    
+    // 생성자를 접근 불가하게 만들고
+    private Message(String text) {
+        this.text = text;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    // 스태틱메소드를 사용해서 생성하게 만들어 놨 을때 
+    public static Message newMessage(String text) {
+        return new Message(text);
+    }
+}
+```
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기

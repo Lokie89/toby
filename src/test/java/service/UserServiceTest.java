@@ -21,8 +21,11 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import proxy.TransactionHandler;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 
@@ -170,22 +173,35 @@ public class UserServiceTest {
         testUserService.setUserDao(this.userDao);
         testUserService.setMailSender(this.mailSender);
 
-        UserServiceTx userServiceTx = new UserServiceTx();
-        userServiceTx.setTransactionManager(this.transactionManager);
-        userServiceTx.setUserService(testUserService);
+
+        TransactionHandler txHandler = new TransactionHandler();
+        txHandler.setTarget(testUserService);
+        txHandler.setTransactionManager(transactionManager);
+        txHandler.setPattern("upgradeLevels");
+
+        dao.service.UserService txUserService = (dao.service.UserService) Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class[]{dao.service.UserService.class},
+                txHandler
+        );
+
+//        UserServiceTx userServiceTx = new UserServiceTx();
+//        userServiceTx.setTransactionManager(this.transactionManager);
+//        userServiceTx.setUserService(testUserService);
 
         userDao.deleteAll();
         for (User user : userList) {
             userDao.add(user);
         }
         try {
-            userServiceTx.upgradeLevels();
+            txUserService.upgradeLevels();
             fail("TestUserServiceException expected");
         } catch (TestUserServiceException e) {
 
         }
         checkLevelUpgraded(userList.get(1), false);
     }
+
 
     @Test
     public void mockUpgradeLevels() throws Exception {
