@@ -1115,7 +1115,7 @@ public class DynamicProxyTest {
     여러 개의 MethodInterceptor 를 추가할 수 있다.
 
 ###### 부가기능 적용 대상 메소드 선정 방법
-    TxProxyfactoryBean 은 pattern 이라는 메소드 이름 비교용 스트링 값을 DI 받아서
+    TxProxyFactoryBean 은 pattern 이라는 메소드 이름 비교용 스트링 값을 DI 받아서
     TransactionHandler 를 생성할 때 이를 넘겨주고, TransactionHandler 는 요청이
     들어오는 메소드의 이름과 패턴을 비교해서 부가기능인 트랜잭션 적용 대상을 판별했다.
     
@@ -1124,7 +1124,172 @@ public class DynamicProxyTest {
     MethodInterceptor 오브젝트는 여러 프록시가 공유해서 사용할 수 있기 때문에
     MethodInterceptor 오브젝트는 타깃 정보를 갖고 있지 않도록 만들었다.
     그 덕분에 MethodInterceptor 를 스프링의 싱글톤 빈으로 등록할 수 있었다.
-     
+    
+    그래서 MethodInterceptor 에는 재사용 가능한 순수한 부가기능 제공 코드만 남겨준다.
+    대신 프록시에 부가기능 적용 메소드를 선택하는 기능을 넣는다.
+    
+    스프링은 부가기능을 제공하는 오브젝트를 어드바이스라고 부르고,
+    메소드 선정 알고리즘을 담은 오브젝트를 포인트컷이라고 부른다.
+    어드바이스와 포인트컷은 모두 프록시에 DI로 주입돼서 사용된다.
+    
+    1. 프록시는 클라이언트로부터 요청을 받으면 
+    2. 먼저 포인트컷에서 부가기능을 부여할 메소드인지 확인
+    3. MethodInterceptor 타입의 어드바이스 호출
+    4. 어드바이스가 부가기능을 부여하는 중에 타깃 메소드의 호출이 필요하면
+    5. MethodInvocation 타입 콜백 오브젝트의 proceed() 메소드 호출
+
+```java
+
+public class DynamicProxyTest {
+    @Test
+    public void pointcutAdvisor() {
+        ProxyFactoryBean pfBean = new ProxyFactoryBean();
+        pfBean.setTarget(new HelloTarget()); // 타겟 등록
+
+        NameMatchMethodPointcut pointcut = new NameMatchMethodPointcut();
+        pointcut.setMappedName("sayH*"); // 포인트 컷 등록
+
+        pfBean.addAdvisor(new DefaultPointcutAdvisor(pointcut, new UppercaseAdvice())); // 포인트컷에 대한 어드바이스 추가
+
+        Hello proxiedHello = (Hello) pfBean.getObject();
+
+        assertThat(proxiedHello.sayHello("Toby"), is("HELLO TOBY"));
+        assertThat(proxiedHello.sayHi("Toby"), is("HI TOBY"));
+        assertThat(proxiedHello.sayThankYou("Toby"), is("Thank You Toby"));
+    }
+}
+```
+    포인트컷이 필요없을 때는 ProxyFactoryBean 의 addAdvice() 메소드를 통하여 어드바이스를 추가함
+    포인트컷과 함께 등록할 때는 Advisor 타입으로 묶어 addAdvisor() 메소드를 호출한다.
+    여기서 굳이 오브젝트로 ( e.g DefaultPointcutAdvisor ) 묶어서 등록하는 이유는
+    ProxyFactoryBean 에는 여러개의 어드바이스와 포인트컷이 추가될 수 있기 때문
+    
+    이렇게 포인트컷과 어드바이스를 묶은 오브젝트를 어드바이저 라고 부른다.
+    어드바이저 = 포인트컷( 메소드 선정 알고리즘 ) + 어드바이스( 부가기능 )
+    
+###### 어드바이저의 빈 등록
+    <bean id="transactionAdvice" class="proxy.TransactionAdvice">
+        <property name="transactionManager" ref="transactionManager"/>
+    </bean>
+
+    <bean id="transactionPointcut" class="org.springframework.aop.support.NameMatchMethodPointcut">
+        <property name="mappedName" value="upgrade*"/>
+    </bean>
+
+    <bean id="transactionAdvisor"
+          class="org.springframework.aop.support.DefaultPointcutAdvisor">
+        <property name="advice" ref="transactionAdvice"/>
+        <property name="pointcut" ref="transactionPointcut"/>
+    </bean>
+
+    <bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="target" ref="userServiceImpl"/>
+        <property name="interceptorNames">
+            <list>
+                <value>transactionAdvisor</value>
+            </list>
+        </property>
+    </bean>
+    
+#### 스프링 AOP
+    
+###### 빈 후처리기를 이용한 자동 프록시 생성기
+    스프링 빈 오브젝트로 만들어지고 난 후에, 빈 오브젝트를 다시 가공할 수 있게 해준다.
+    빈 후처리기 자체를 빈으로 등록하고 빈 오브젝트가 생성될 때마다 빈 후처리기에 보내서 후처리 작업을 요청
+    빈 후처리기는 빈 오브젝트의 프로퍼티를 강제로 수정할 수도 있고 별도의 초기화 작업을 수행할 수도 있다.
+    
+    1. ( e.g) DefaultAdvisorAutoProxyCreator ) 빈 후처리기가 등록되어 있으면
+    2. 스플이은 빈 오브젝트를 만들 때마다 후처리기에게 빈을 보낸다.
+    3. DefaultAdvisorAutoProxyCreator 는 빈으로 등록된 모든 어드바이저 내의 포인트컷을 이용해
+       전달받은 빈이 프록시 적용 대상인지 확인
+    4. 적용 대상이면 내장된 프록시 생성기에게 현재 빈에 대한 프록시를 만들게하고
+    5. 만들어진 프록시에 어드바이저를 연결해준다.
+    6. 빈 후처리기는 프록시가 생성되면 원래 컨테이너가 전달해준 빈 오브젝트 대신
+       프록시 오브젝트를 컨테이너에게 돌려준다.
+    7. 컨테이너는 최종적으로 빈 후처리기가 돌려준 오브젝트를 빈으로 등록하고 사용한다.
+    
+    적용할 빈을 선정하는 로직이 추가된 포인컷이 담긴 어드바이저를 등록하고 빈 후처리기를 사용하면
+    일일이 ProxyFactoryBean 을 등록하지 않아도 타깃 오브젝트에 자동으로 프록시가 적용되게 할 수 있다.
+    
+###### 포인트컷
+    처음에 포인트컷은 타깃 오브젝트의 어떤 메소드에 부가기능을 적용할지를 선정해주는 역할
+    포인트컷은 클래스 필터의 기능을 제공함
+    클래스 필터를 이용하여 빈 후처리기를 이용하기 전 프록시를 적용할 클래스인지 판단할 수 있음
+    
+```java
+public class DynamicProxyTest {
+    @Test
+    public void classNamePointcutAdvisor() {
+        NameMatchMethodPointcut classMethodPointcut = new NameMatchMethodPointcut() {
+            // getClassFilter Override 하여 ClassFilter 재정의
+            public ClassFilter getClassFilter() {
+                return new ClassFilter() {
+                    @Override
+                    public boolean matches(Class<?> clazz) {
+                        return clazz.getSimpleName().startsWith("HelloT");
+                    }
+                };
+            }
+        };
+        classMethodPointcut.setMappedName("sayH*");
+
+        checkAdviced(new HelloTarget(), classMethodPointcut, true);
+
+        class HelloWorld extends HelloTarget {};
+        checkAdviced(new HelloWorld(), classMethodPointcut, false);
+
+        class HelloToby extends HelloTarget {};
+        checkAdviced(new HelloToby(), classMethodPointcut, true);
+    }
+
+    private void checkAdviced(Object target, Pointcut pointcut, boolean adviced) {
+        ProxyFactoryBean pfBean
+                = new ProxyFactoryBean();
+        pfBean.setTarget(target);
+        pfBean.addAdvisor(new DefaultPointcutAdvisor(pointcut, new UppercaseAdvice()));
+        Hello proxiedHello = (Hello) pfBean.getObject();
+        if (adviced) {
+            assertThat(proxiedHello.sayHello("Toby"), is("HELLO TOBY"));
+            assertThat(proxiedHello.sayHi("Toby"), is("HI TOBY"));
+            assertThat(proxiedHello.sayThankYou("Toby"), is("Thank You Toby"));
+        } else {
+            assertThat(proxiedHello.sayHello("Toby"), is("Hello Toby"));
+            assertThat(proxiedHello.sayHi("Toby"), is("Hi Toby"));
+            assertThat(proxiedHello.sayThankYou("Toby"), is("Thank You Toby"));
+        }
+    }
+}
+```
+    자동 프록시 생성기 등록
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+    
+    포인트컷 등록
+    <bean id="transactionPointcut" class="proxy.NameMatchClassMethodPointcut">
+        <property name="mappedName" value="*ServiceImpl"/>
+        <property name="mappedNames" value="upgrade*"/>
+    </bean>
+    
+    ProxyFactoryBean 제거
+    <bean id="transactionPointcut" class="proxy.NameMatchClassMethodPointcut">
+        <property name="mappedClassName" value="*ServiceImpl"/>
+        <property name="mappedName" value="upgrade*"/>
+    </bean>
+    
+    Test 용 UserService 등록
+    <!--parent 어트리뷰트는 다른 빈 설정의 내용을 상속받기 위함-->
+    <bean id="testUserService" class="proxy.UserServiceTest$TestUserServiceImpl" parent="userService"/>
+    
+###### 자동 생성 프록시 확인
+    1. 트랜잭션이 필요한 빈에 트랜잭션 부가기능이 적용 되었는가 ( 일반 테스트 )
+    2. 아무 빈에나 트랜잭션 부가기능이 적용되지 않았는가 ( 역 테스트 ) -> mappedClassName 수정하여 테스트
+    3. 생성한 객체의 타입이 Proxy 인지 아닌지
+    
+###### 포인트컷 표현식
+    단순히 이름을 비교해서 클래스나 메소드를 선정하지 않고
+    이보다 더 복잡하고 세밀한 기준을 이용하기 위해 스프링에서 제공하는 간단하고 효과적인 방법
+    AspectJExpressionPointcut 클래스 사용
+    
+    execution( [ 접근제한자 패턴 ] (리턴)타입패턴 [ (패키지,클래스 이름)타입패턴. ] (메소드)이름패턴 ( (파라미터)타입패턴 | "..", ... ) [ throws 패턴 ] )
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기

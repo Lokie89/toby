@@ -34,4 +34,7 @@ dependencies {
 
     compile group: 'aopalliance', name: 'aopalliance', version: '1.0'
     compile group: 'org.springframework', name: 'spring-aop', version: '5.2.4.RELEASE'
+
+    // AspectJExpressionPointcut Class 사용
+    compile group: 'org.aspectj', name: 'aspectjtools', version: '1.8.9'
 }
