@@ -12,7 +12,7 @@ import static org.junit.Assert.assertThat;
 public class PointcutTest {
 
     @Test
-    public void methodSignaturPointcut() throws SecurityException, NoSuchMethodException {
+    public void methodSignaturePointcut() throws SecurityException, NoSuchMethodException {
         AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
         pointcut.setExpression(
                 "execution(public int pointcut.Target.minus(int,int) throws java.lang.RuntimeException)"

@@ -1287,9 +1287,235 @@ public class DynamicProxyTest {
 ###### 포인트컷 표현식
     단순히 이름을 비교해서 클래스나 메소드를 선정하지 않고
     이보다 더 복잡하고 세밀한 기준을 이용하기 위해 스프링에서 제공하는 간단하고 효과적인 방법
-    AspectJExpressionPointcut 클래스 사용
     
+    AspectJExpressionPointcut 클래스 사용
     execution( [ 접근제한자 패턴 ] (리턴)타입패턴 [ (패키지,클래스 이름)타입패턴. ] (메소드)이름패턴 ( (파라미터)타입패턴 | "..", ... ) [ throws 패턴 ] )
+    
+    bean() 메소드 사용
+    e.g ) bean(*Service)
+    
+    Annotation 사용
+    e.g ) @annotation(org.springframework.transaction.annotation.Trasactional)
+    
+    포인트컷 포현식을 사용하면 로직이 짧은 문자열에 담기기 때문에 클래스나 코드를 추가할 필요가 없어서
+    코드와 설정이 모두 단순해진다. 반면에 문자열로 된 표현식이므로 런타임 시점까지 문법의 검증이나 기능
+    확인이 되지 않는다는 단점이 있다. 포인트컷 표현식의 사용으로 얻을 수 있는 장점이 많은 만큼 충분한 학습과
+    다양한 테스트를 통해 검증하는 과정이 필요하다.
+    
+###### 타입 패턴과 클래스 이름 패턴
+    포인트컷 표현식에서는 클래스의 이름 패턴이 아닌 타입 패턴을 사용함
+    따라서 타입 패턴 정의에 따른 클래스들에 모두 적용됨
+    어떤 클래스의 슈퍼클래스 또는 구현 인터페이스의 이름을 정의해도 해당 클래스 또한 함께 적용된다.
+    
+#### AOP란
+    트랜잭션 추상화
+        인터페이스와 DI를 통해 무엇을 하는지를 남기고, 그것을 "어떻게 하는지를 분리"한 것
+        
+    프록시와 데코레이터 패턴
+        DI를 이용한 데코레이터 패턴은 비즈니스 로직을 담은 클래스의 코드에는 전혀 영향을 주지 않으면서
+        트랜잭션이라는 부가기능을 자유롭게 부여할 수 있는 구조를 만들어줌
+        
+    다이나믹 프록시와 프록시 팩토리 빈
+        프록시를 이용하여 비즈니스 로직 코드에서 트랜잭션 코드는 제거했지만
+        모든 메소드마다 트랜잭션 기능을 부여하는 코드를 넣어야 했음
+        JDK 다이나믹 프록시 기술 적용하여 일부 메소드에만 트랜잭션 코드 적용
+        그러나 오브젝트 단위로는 적용이 불가
+        스프링 프록시 팩토리 빈을 이용하여 어드바이스와 포인트컷으로 분리 사용 가능
+        
+    자동 프록시 생성 방법과 포인트컷
+        트랜잭션 적용 대상을 빈마다 설정해줘야 했음
+        프록시를 정해진 패턴으로 자동 생성하게 함 ( 포인트컷 사용 )
+    
+    부가기능 모듈화
+        관심사가 같은 코드를 객체지향 설계 원칙에 따라 분리하고,
+        서로 낮은 결합도를 가진 채로 독립적이고 유연하게 확장할 수 있는 모듈로 만든다.
+        
+        그러나 트랜잭션 적용 코드의 경계설정 기능은 "다른 모듈의 코드에 부가적으로 부여되는 기능" 이라는
+        특징 때문에 클래스를 만들지 않고도 새로운 구현 기능을 가진 오브젝트를 다이나믹하게 만들어야 했다.
+        트랜잭션 부가기능은 타깃이 존재하고 각 타깃의 코드 안에 침투하거나 긴밀하게 연결되어 있어야 한다.
+        
+        개발자들은 이런 여기저기에 흩어져있는 부가기능들을 모듈화 시키기 위해
+        DI, 데코레이터 패턴, 다이나믹 프록시, 오브젝트 생성 후처리, 자동 프록시 생성, 포인트컷과 같은 기법을
+        사용했다. 그 결과 TransactionAdvice 라는 이름으로 모듈화될 수 있었다.
+        
+    Aspect Oriented Programming
+        Aspect 란 그 자체로 애플리케이션의 핵심기능을 담고 있지는 않지만,
+        애플리케이션을 구성하는 중요한 한 가지 요소이고, 핵심기능에 부가되어 의미를 갖는 특별한 모듈
+        
+        애플리케이션의 핵심적인 기능에서 부가적인 기능을 분리해서 애스팩트라는 독특한 모듈로 만들어서
+        설계하고 개발하는 방법을 Aspect Oriented Programming 이라고 부른다.
+        
+        부가기능이 핵심기능 안으로 침투하면 핵심기능 설계에 객체지향 기술의 가치를 온전하게 부여하기 어렵다.
+        부가된 코드로 인해 객체지향적인 설계가 주는 장점을 잃어버리기 쉽다.
+        AOP는 애스팩트를 분리함으로써 핵심기능을 설계하고 구현할 때 
+        객체지향적인 가치를 지킬 수 있도록 도와주는 것
+        AOP는 결국 애플리케이션을 다양한 측면 ( 관점 )에서 독립적으로 모델링, 설계, 개발 할 수 있도록 도와주는 것이다.
+
+#### AOP 적용 기술
+    프록시를 이용한 AOP
+        스프링 AOP의 부가기능을 담은 어드바이스가 적용되는 대상은 오브젝트의 메소드다.
+        프록시 방식을 사용했기 때문에 메소드 호출 과정에 참여해서 부가기능을 제공해주게 되어있다.
+        
+    바이트코드 생성과 조작을 통한 AOP
+        프록시처럼 간접적인 방법이 아니라, 타깃 오브젝트를 뜯어고쳐서 부가기능을 직접 넣어주는 방법을 사용
+        컴파일된 타깃의 클래스 파일 자체를 수정하거나, 클래스가 JVM에 로딩되는 시점을 가로채서
+        바이트코드를 조작하는 복잡한 방법을 사용
+        복잡한데 사용하는 이유
+            1. 바이트 코드를 조작하면 DI 컨테이너의 도움을 받아서 자동프록시 생성 방식을 사용하지 않아도 AOP 적용 가능
+            2. 프록시 방식보다 훨씬 강력하고 유연한 AOP가 가능
+               프록시 방식은 클라이언트가 호출할 때 사용하는 메소드로 제한되지만
+               바이트코드 방식은 오브젝트의 생성, 필드값의 조회와 조작, 스태틱 초기화 등 다양한 작업에 부가기능 적용 가능
+               
+        단점 바이트코드 조작을 위해 JVM 실행 옵션 변경, 별도의 컴파일러, 특별한 클래스 로더를 사용하는 등 부가작업 필요
+
+#### AOP 용어
+    타깃 : 부가기능을 부여할 대상
+    어드바이스 : 타깃에게 제공할 부가기능을 담은 모듈
+    조인포인트 : 어드바이스가 적용될 수 있는 위치
+    포인트컷 : 어드바이스를 적용할 조인 포인트를 선별하는 작업 또는 그 기능을 정의한 모듈
+    프록시 : 클라이언트와 타깃 사이에 투명하게 존재하면서 부가기능을 제공하는 오브젝트
+    어드바이저 : 포인트컷과 어드바이스를 하나씩 갖고 있는 오브젝트
+    애스팩트 : 한개 또는 그 이상의 포인트컷과 어드바이스의 조합으로 만들어지며 보통 싱글톤 형태의 오브젝트로 존재
+              클래스와 같은 모듈 정의와 오브젝트와 같은 실체의 구분이 특별히 없다.
+    
+#### 스프링 AOP 적용
+    자동 프록시 생성기
+        DefaultAdvisorAutoProxyCreator 클래스를 빈으로 등록한다.
+        애플리케이션 컨텍스트가 빈 오브젝트를 생성하는 과정에 빈 후처리기로 참여한다.
+        빈으로 등록된 어드바이저를 이용하여 프록시를 자동으로 생성하는 기능을 담당한다.
+    어드바이스
+        부가기능을 구현한 클래스를 빈으로 등록한다. TransactionAdvice 는 유일하게 "직접 구현한 클래스"를 사용한다.
+    포인트컷
+        스프링의 AspectJExpressionPointcut 을 빈으로 등록 
+        expression 프로퍼티에 포인트컷 표현식을 넣어준다
+    어드바이저
+        스프링의 DefaultPointcutAdvisor 클래스를 빈으로 등록해 사용
+        어드바이스와 포인트컷을 프로퍼티로 참조한다.
+        
+    xml 선언
+        <?xml version="1.0" encoding="UTF-8"?>
+        <beans xmlns="http://www.springframework.org/schema/beans"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:aop="http://www.springframework.org/schema/aop" // 추가
+               xsi:schemaLocation="http://www.springframework.org/schema/beans
+                                   http://www.springframework.org/schema/beans/spring-beans.xsd
+                                   http://www.springframework.org/schema/aop // 추가
+                                   http://www.springframework.org/schema/aop/spring-aop-3.0.xsd"> //추가
+                                   
+        <aop:config>
+            <aop:pointcut id="transactionPointcut" expression="execution(* *..*ServiceImpl.upgrade*(..))"/>
+            <aop:advisor advice-ref="transactionAdvice" pointcut-ref="transactionPointcut"/>
+        </aop:config>
+        
+        <aop:config>
+        <!--<aop:pointcut id="transactionPointcut" expression="execution(* *..*ServiceImpl.upgrade*(..))"/>-->
+        <!--<aop:advisor advice-ref="transactionAdvice" pointcut-ref="transactionPointcut"/>-->
+            <aop:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))"/>
+        </aop:config>
+#### 트랜잭션 속성
+    DefaultTransactionDefinition 
+```java
+public class TransactionAdvice implements MethodInterceptor {
+    @Override
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        TransactionStatus status =
+                this.transactionManager.getTransaction(new DefaultTransactionAttribute()); // 트랜잭션 정의
+        try {
+            Object ret = invocation.proceed();
+            this.transactionManager.commit(status); // 트랜잭션 종료
+            return ret;
+        } catch (RuntimeException e) {
+            this.transactionManager.rollback(status); // 트랜잭션 종료
+            throw e;
+        }
+    }
+}
+```
+###### 트랜잭션 정의
+    TransactionDefinition 인터페이스의 속성
+    
+    트랜잭션 전파
+        트랜잭션의 경계에서 이미 진행 중인 트랜잭션이 있을 때 또는 없을 때 
+        어떻게 동작할 것인가를 결정하는 방식
+        
+        PROPAGATION_REQUIRED
+            가장 많이 사용되는 전파 속성
+            진행 중인 트랜잭션이 없으면 새로 시작하고, 이미 시작된 트랜잭션이 있으면 이에 참여한다.
+        PROPAGATION_REQUIRES_NEW
+            항상 새로운 트랜잭션을 시작한다.
+            앞에서 시작된 트랜잭션이 있든 없든 상관없이 새로운 트랜잭션을 만들어서 독자적으로 동작하게 한다.
+        PROPAGATION_NOT_SUPPORTED
+            진행 중인 트랜잭션이 있어도 무시한다.
+            트랜잭션 없이 동작 가능
+            전체 포인트컷에는 트랜잭션을 적용하지만 특정 트랜잭션을 "제외"할 때 사용
+            
+    격리수준
+        모든 db 트랜잭션은 격리수준( isolation level )을 갖고 있어야 한다.
+        가능하다면 모든 트랜잭션이 순차적으로 진행돼서 다른 트랜잭션의 작업에 독립되는 것이 좋겠지만,
+        성능이 크게 떨어질 수 있다.
+        따라서 적절하게 격리수준을 조정해서 가능한 많은 트랜잭션을 동시에 진행시키며, 
+        문제가 발생하지 않게 하는 제어가 필요하다.
+        
+        격리수준은 기본적으로 DB에 설정되어 있지만 JDBC 드라이버나 DataSource 등에서 재설정이 가능하고,
+        트랜잭션 단위로도 격리수준을 조정할 수 있다.
+        
+        ISOLATION_DEFAULT
+            DataSource에 설정되어 있는 디폴트 격리수준을 그대로 따른다.
+    
+    제한시간
+        트랜잭션을 수행하는 제한시간을 설정할 수 있다.
+        DefaultTransactionDefinition 의 기본 설정은 제한시간이 없다.
+    
+    읽기전용
+        읽기전용으로 설정해두면 트랜잭션 내에서 데이터를 조작하는 시도를 막아줄 수 있다.
+        또한 데이터 엑세스 기술에 따라서 성능이 향상될 수도 있다.
+
+###### 트랜잭션 인터셉터와 트랜잭션 속성
+    메소드별로 다른 트랜잭션 정의를 적용하려면 어드바이스 기능을 확장해야 한다.
+    초기의 Transactionhandler에서 메소드 이름을 이용해 트랝개션 적용 여부를 판단했던 것과 비슷한 방식을 사용한다.
+    
+    TransactionInterceptor
+        TransactionInterceptor 어드바이스의 동작방식은 기존의 TransactionAdvice와 다르지 않다.
+        그러나 트랜잭션 정의를 메소드 이름 패턴을 이용해서 다르게 지정할 수 있는 방법을 추가로 제공해준다.
+        TransactionInterceptor 는 PlatformTransactionManager 와 Properties 타입의 두가지 프로퍼티가 있다.
+        Properties 타입은 transactionAttributes로 트랜잭션 속성을 정의한 프로퍼티다.
+        트랜잭션 속성은 TransactionDefinition 의 네가지 기본 항목에 rollbanckOn() 이라는 메소드를 하나 더 가지고 있는
+        TransactionAttribute 인터페이스로 정의된다.
+        rollbackOn() 메소드는 어떤 예외가 발생하면 롤백을 할 것인가를 결정하는 메소드다.
+        
+```java
+public class TransactionAdvice implements MethodInterceptor {
+    @Override
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        TransactionStatus status =
+                this.transactionManager.getTransaction(new DefaultTransactionAttribute()); // 트랜잭션 정의
+        try {
+            Object ret = invocation.proceed();
+            this.transactionManager.commit(status); // 트랜잭션 종료
+            return ret;
+        } catch (RuntimeException e) {
+            this.transactionManager.rollback(status); // 트랜잭션 종료
+            throw e;
+        }
+    }
+}
+```
+    에서 TransactionAdvice는 RuntimeException 이 발생하는 경우에만 트랜잭션을 롤백시킨다.
+    런타임 예외가 아닌 경우에는 트랜잭션이 제대로 처리되지 않고 메소드를 빠져나가게 되어 있다.
+    
+    스프링이 제공하는 TransactionInterceptor에는 기본적으로 두가지 종류의 예외처리 방식이 있다.
+    1. 런타임 예외가 발생하면 트랜잭션은 롤백된다.
+    2. 타깃 메소드가 런타임 예외가 아닌 체크 예외를 던지는 경우에는 예외상황으로 해석하지 않고
+       일종의 비즈니스 로직에 따른, 의미가 있는 리턴 방식의 한 가지로 인식해서 트랜잭션을 커밋한다.
+    
+    그런데 TransactionInterceptor의 이러한 예외처리 기본 원칙을 따르지 않는 경우가 있을 수 있다.
+    그래서 TransactionAttribute는 rollbackOn()이라는 속성을 둬서 기본 원칙과 다른 예외처리가 가능하게 해준다.
+    이를 활용하면 특정 체크 예외의 경우는 트랜잭션을 롤백시키고, 특정 런타임 예외에 대해서는 트랜잭션을 커밋시킬 수도 있다.
+    
+###### 메소드 이름 패턴을 이용한 트랜잭션 속성 지정
+    Propeties 타입의 transactionAttributes 프로퍼티는 메소드 패턴과 트랜잭션 속성을 키와 값으로 갖는 컬렉션이다.
+    
+
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기
