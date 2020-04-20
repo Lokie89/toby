@@ -1515,6 +1515,134 @@ public class TransactionAdvice implements MethodInterceptor {
 ###### 메소드 이름 패턴을 이용한 트랜잭션 속성 지정
     Propeties 타입의 transactionAttributes 프로퍼티는 메소드 패턴과 트랜잭션 속성을 키와 값으로 갖는 컬렉션이다.
     
+    PROPAGATION_NAME ( 트랜잭션 전파 방식, 필수 항목, PROPAGATION_ 으로 시작함 ),
+    ISOLATION_NAME ( 격리 수준, ISONLATION_ 으로 시작, 생략 가능 ),
+    readOnly ( 읽기전용 항목, 생략 가능, default 값은 읽기전용이 아님 ),
+    timeout_NNNN ( 제한시간, timeout_ 으로 시작, 초 단위 시간을 붙임, 생략 가능 ),
+    -Exception1 ( 체크 예외 중에서 롤백 대상으로 추가할 것을 넣음, 한개 이상 등록 가능 ),
+    +Exception2 ( 런타임 예외, 롤백시키지 않은 예외를 넣음, 한개 이상 등록 가능 )
+    
+    모든 런타임 예외는 롤백돼야 하지만, +XXXRuntimeException 이라고 해주면 커밋 가능
+    반대로 체크 예외는 모두 커밋이 기본이지만, -를 붙여주면 롤백 대상이 됨.
+    
+    트랜잭션 속성 정의 예
+    
+    <bean id="transactionAdvice" class="org.springframework.transaction.interceptor.TransactionInterceptor">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="transactionAttributes">
+            <props>
+                <prop key="get*">PROPAGATION_REQUIRED,readOnly,timeout_30</prop>
+                <prop key="upgrade*">PROPAGATION_REQUIRES_NEW,ISOLATION_SERIALIZABLE</prop>
+                <prop key="*">PROPAGATION_REQUIRED</prop>
+            </props>
+        </property>
+    </bean>
+    
+    첫번째는 get으로 시작하는 모든 메소드에 대한 속성
+        PROPAGATION_REQUIRED 이면서, 읽기전용, 시간제한은 30초
+    두번째는 upgrade로 시작하는 메소드에 대한 속성
+        PROPAGATION_REQUIRES_NEW 항상 독립적인 트랜잭션으로 동작, 
+        ISOLATION_SERIALIZABLE 다른 동시작업에 영향을 받지 않도록 고립된 상태에서 트랜잭션 동작
+    세번째는 *만 사용하여 두가지 조건에 해당하지 않는 나머지 모든 메소드에 사용될 속성을 지정
+        PROPAGATION_REQUIRED 만 지정 나머지는 디폴트 설정
+        
+###### tx 네임스페이스를 이용한 설정 방법
+    TransactionInterceptor 타입의 어드바이스 빈과 TransactionAttribute 타입의 속성 정보도
+    tx 스키마의 전용 태그를 이용해 정의할 수 있다.
+    
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    
+    http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+    
+    <tx:advice id="transactionAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="get*" propagation="REQUIRED" read-only="true" timeout="30"/>
+            <tx:method name="upgrade*" propagation="REQUIRES_NEW" isolation="SERIALIZABLE"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+    
+    트랜잭션 속성이 개별 어트리뷰트를 통해 지정될 수 있으므로 설정 내용을 읽기가 더 쉽고
+    XML 에디터의 자동완성 기능을 통해 편하게 작성할 수 있다.
+    문자열로 입력할 때 자주 발생하는 오타 문제도 해결할 수 있다.
+    
+#### 포인트컷과 트랜잭션 속성의 적용 전략
+    트랜잭션 포인트컷 표현식은 타입 패턴이나 빈 이름을 이용한다.
+    
+    공통된 메소드 이름 규칙을 통해 최소한의 트랜잭션 어드바이스와 속성을 정의한다.
+    
+    프록시 방식 AOP는 같은 타깃 오브젝트 내의 메소드를 호출할 때는 적용되지 않는다.
+    
+#### 트랜잭션 속성 적용
+    트랜잭션 경계설정의 일원화
+        일반적으로 특정 계층의 경계를 트랜잭션 경계와 일치시키는 것이 바람직하다.
+        비즈니스 로직을 담고 있는 서비스 계층 오브젝트의 메소드가 
+        트랜잭션 경계를 부여하기에 가장 적절한 대상이다.
+    서비스 빈에 적용되는 포인트컷 표현식 등록
+        포인트컷 표현식을 모든 비즈니스 로직의 서비스 빈에 적용되도록 수정한다.
+        
+    트랜잭션 속성을 가진 트랜잭션 어드바이스 등록
+        
+    트랜잭션 속성 테스트
+    
+#### 애노테이션 트랜잭션 속성과 포인트컷
+    세밀한 트랜잭션 속성의 제어가 필요한 경우를 위해 스프링이 제공하는 다른 방법이 있다.
+    설정 파일에서 패턴으로 분류 가능한 그룹을 만들어서 일괄적으로 속성을 부여하는 대신에
+    직접 타깃에 트랜잭션 속성정보를 가진 애노테이션을 지정하는 방법이다.
+    
+###### 트랜잭션 어노테이션
+    @Transactional
+        애노테이션을 트랜잭션 속성정보로 사용하도록 지정하면 스프링은 
+        @Transactional 이 부여된 모든 오브젝트를 자동으로 타깃 오브젝트로 인식한다.
+        이때 사용되는 포인트컷은 TransactionAttributeSourcePointcut 이다.
+        @Transactional 은 기본적으로 트랜잭션 속성을 정의하는 것이지만,
+        동시에 포인트컷의 자동등록에도 사용된다.
+    
+    트랜잭션 속성을 이용하는 포인트컷
+        포인트컷과 트랜잭션 속성을 애노테이션 하나로 지정할 수 있다.
+        트랜잭션 속성은 타입 레벨에 일괄적으로 부여할 수도 있지만,
+        메소드 단위로 세분화해서 트랜잭션 속성을 다르게 지정할 수도 있기 때문에
+        매우 세밀한 트랜잭션 속성 제어가 가능해진다.
+        
+    대체 정책
+        스프링은 @Transactional 을 적용할 때 4단계의 대체 정책을 이용하게 해준다.
+        메소드의 속성을 확인할 때 타깃메소드, 타깃클래스, 선언메소드, 선언타입의 순서에 따라서
+        @Transactional 이 적용됐는지 차례로 확인하고, 가장 먼저 발견되는 속성 정보를 사용
+        
+        e.g )
+        [1]
+        public interface Service {
+           [2]
+           void method1();
+           [3]
+           void method2();
+        }
+        [4]
+        public class ServiceImpl implements Service {
+            [5]
+            public void method1(){}
+            [6]
+            public void method2(){}
+        }
+    
+        일 때, ServiceImpl 이 빈으로 등록됐고 두 메소드가 트랜잭션 적용 대상이 된다면
+        @Transactional 을 부여할 수 있는 위치는 총 6개 이다.
+        
+        순서는 [5] [6] ( 타깃메소드 ), [4] ( 타깃클래스 ), [2] [3] ( 선언메소드 ), [1] ( 선언타입 ) 순으로 확인한다.
+        
+        기본적으로 @Transactional 적용 대상은 클라이언트가 사용하는 인터페이스가 정의한 메소드이므로
+        @Transactional 도 타깃 클래스 보다는 인터페이스에 두는 게 바람직하다.
+        하지만 인터페이스를 사용하는 프록시 방식의 AOP가 아닌 방식으로 트랜잭션을 적용하면 인터페이스에 정의한 
+        @Transactional 은 무시되기 때문에 안전하게 타깃 클래스에 @Transactional 을 두는 방법을 권장한다.
+        인터페이스에 @Transactional 을 두면 구현 클래스가 바뀌더라도 트랜잭션 속성을 유지할 수 있다는 장점이 있다.
+    
+    트랜잭션 어노테이션 사용을 위한 설정
+        <tx:annotation-driven/>
+        
+###### 트랜잭션 어노테이션 적용
+
+ 
 
 ## 7. 스프링 핵심 기술의 응용
 ## 8. 스프링이란 무엇인가?
