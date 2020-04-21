@@ -30,6 +30,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void deleteAll() {
+
+    }
+
+    @Override
+    public void update(User user) {
+
+    }
+
+    @Override
     public void upgradeLevels() {
         List<User> userList = userDao.getAll();
         for(User user:userList){
@@ -37,6 +47,16 @@ public class UserServiceImpl implements UserService {
                 upgradeLevel(user);
             }
         }
+    }
+
+    @Override
+    public User get(String id) {
+        return null;
+    }
+
+    @Override
+    public List<User> getAll() {
+        return null;
     }
 
     private boolean canUpgradeLevel(User user) {

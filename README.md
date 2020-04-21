@@ -1586,21 +1586,21 @@ public class TransactionAdvice implements MethodInterceptor {
         
     트랜잭션 속성 테스트
     
-#### 애노테이션 트랜잭션 속성과 포인트컷
+#### 애너테이션 트랜잭션 속성과 포인트컷
     세밀한 트랜잭션 속성의 제어가 필요한 경우를 위해 스프링이 제공하는 다른 방법이 있다.
     설정 파일에서 패턴으로 분류 가능한 그룹을 만들어서 일괄적으로 속성을 부여하는 대신에
-    직접 타깃에 트랜잭션 속성정보를 가진 애노테이션을 지정하는 방법이다.
+    직접 타깃에 트랜잭션 속성정보를 가진 애너테이션을 지정하는 방법이다.
     
 ###### 트랜잭션 어노테이션
     @Transactional
-        애노테이션을 트랜잭션 속성정보로 사용하도록 지정하면 스프링은 
+        애너테이션을 트랜잭션 속성정보로 사용하도록 지정하면 스프링은 
         @Transactional 이 부여된 모든 오브젝트를 자동으로 타깃 오브젝트로 인식한다.
         이때 사용되는 포인트컷은 TransactionAttributeSourcePointcut 이다.
         @Transactional 은 기본적으로 트랜잭션 속성을 정의하는 것이지만,
         동시에 포인트컷의 자동등록에도 사용된다.
     
     트랜잭션 속성을 이용하는 포인트컷
-        포인트컷과 트랜잭션 속성을 애노테이션 하나로 지정할 수 있다.
+        포인트컷과 트랜잭션 속성을 애너테이션 하나로 지정할 수 있다.
         트랜잭션 속성은 타입 레벨에 일괄적으로 부여할 수도 있지만,
         메소드 단위로 세분화해서 트랜잭션 속성을 다르게 지정할 수도 있기 때문에
         매우 세밀한 트랜잭션 속성 제어가 가능해진다.
@@ -1640,10 +1640,131 @@ public class TransactionAdvice implements MethodInterceptor {
     트랜잭션 어노테이션 사용을 위한 설정
         <tx:annotation-driven/>
         
-###### 트랜잭션 어노테이션 적용
+###### 트랜잭션 애너테이션 적용
+    @Transactional 을 이용하는 트랜잭션 설정이 직관적이고 간단하다고 생각해서 사용하는 경우도 많다.
+    클래스, 빈, 메소드의 이름에 일관된 패턴을 만들어 적용하고 이를 활용해 포인트컷과 트랜잭션 속성을
+    지정하는 것보다는 단순하게 트랜잭션이 필요한 타입 또는 메소드에 직접 애너테이션을 부여하는 것이
+    훨씬 편리하고 코드를 이해하기도 좋다.
+    
+    다만 트랜잭션 적용 대상을 손쉽게 파악할 수 없고, 사용 정책을 잘 만들어두지 않으면 무분별하게
+    사용되거나 자칫 빼먹을 위험도 있다. 
+    
+```java
+@Transactional
+public interface UserService {
 
- 
+    void add(User user);
+    void deleteAll();
+    void update(User user);
+    void upgradeLevels(); 
+    // 여기까지는 <tx:method name="*"/> 설정 효과
+
+    @Transactional(readOnly = true)
+    User get(String id);
+
+    @Transactional(readOnly = true)
+    List<User> getAll(); 
+    // 여기까지는 tx:method name="get*" read-only="true"/>를 애너테이션 방식으로 변경한 것
+    // 메소드 단위로 부여된 트랜잭션의 속성이 타입 레벨에 부여된 것에 우선해서 적용된다.
+    // 같은 속성을 가졌어도 메소드 레벨에 부여될 때는 메소드마다 반복될 수밖에 없다.
+}
+```
+
+#### 트랜잭션 지원 테스트
+###### 트랜잭션 전파속성
+    REQUIRED 로 전파 속성을 지정해줄 경우, 앞에서 진행 중인 트랜잭션이 있으면 참여하고
+    없으면 자동으로 새로운 트랜잭션을 시작해준다.
+    REQUIRED 전파 속성을 가진 메소드를 결합해서 다양한 크기의 트랜잭션 작업을 만들 수 있다.
+    트랜잭션 적용 때문에 불필요하게 코드를 중복하는 것도 피할 수 있으며,
+    애플리케이션을 작은 기능 단위로 쪼개서 개발할 수 있다.
+    
+    트랜잭션 전파 방식이 없다면 독자적인 트랜잭션 메소드를 사용하는 다른 트랜잭션 메소드에서
+    같은 메소드를 복사하여 사용해함
+    
+    AOP를 이용해 코드 외부에서 트랜잭션의 기능을 부여해주고 
+    속성을 지정할 수 있게 하는 방법을 선언적 트랜잭션이라고한다.
+    반대로 TransactionTemplate 이나 개별 데이터 기술의 트랜잭션 API를 사용해 
+    직접 코드 안에서 사용하는 방법을 프로그램에 의한 트랜잭션 이라고 한다.
+    
+## ★ AOP 부분 다시 할것
 
 ## 7. 스프링 핵심 기술의 응용
+    스프링이 가장 가치를 두고 적극적으로 활용하려고 하는 것은 
+    결국 자바언어가 기반을 두고 있는 객체지향 기술이다.
+#### DAO SQL 분리
+    1. String bean 생성
+        <bean id="userDao" class="dao.independent.UserDaoJDBC">
+            <property name="dataSource" ref="dataSource"/>
+            <property name="sqlAdd" value="insert into users(id, name, password,
+                                level, login ,recommend) values(?, ?, ?, ?, ?, ?)"/>
+        </bean>
+    2. Map bean 생성
+        <bean id="userDao" class="dao.independent.UserDaoJDBC">
+            <property name="dataSource" ref="dataSource"/>
+            <property name="sqlMap">
+                <map>
+                    <entry key="add" value="insert into users(id, name, password, level, login ,recommend)
+                                            values(?, ?, ?, ?, ?, ?)"/>
+                    <entry key="get" value="select * from users where id = ?"/>
+                    ...
+                </map>
+            </property>
+        </bean>
+    3. interface 생성 후 DI
+        <bean id="userDao" class="dao.independent.UserDaoJDBC">
+            <property name="dataSource" ref="dataSource"/>
+            <property name="sqlService" ref="sqlService"/>
+        </bean>
+        
+        <bean id="sqlService" class="dao.independent.SimpleSqlService">
+            <property name="sqlMap">
+                <map>
+                    <entry key="userAdd" value="insert into users(id, name, password, level, login ,recommend)
+                                            values(?, ?, ?, ?, ?, ?)"/>
+                    <entry key="userGet" value="select * from users where id = ?"/>
+                    <entry key="userGetAll" value="select * from users order by id"/>
+                    <entry key="userDeleteAll" value="delete from users"/>
+                    <entry key="userGetCount" value="select count(id) from users"/>
+                    <entry key="userUpdate" value="update users set name = ?, password = ?, level = ?, login = ?, recommend = ? where id = ?"/>
+                </map>
+            </property>
+        </bean>
+        
+    4. sql xsd
+        <?xml version="1.0" encoding="UTF-8"?>
+        <schema xmlns="http://www.w3.org/2001/XMLSchema"
+                targetNamespace="http://www.epril.com/sqlmap"
+               xmlns:tnx="http://www.epril.com/sqlmap" elementFormDefault="qualified">
+            <element name="sqlmap">
+                <complexType>
+                    <sequence>
+                        <element name="sql" maxOccurs="unbounded" type="tnx:sqlType"/>
+                        // maxOccurs 필요한 개무만큼 sql 을 포함할 수 있게 함
+                    </sequence>
+                </complexType>
+            </element>
+        
+            <complexType name="sqlType"> // sql 에 대한 정의를 시작
+                <simpleContent>
+                    <extension base="string"> // sql 문장을 넣을 스트링 타입 정의
+                        <attribute name="key" use="required" type="string"/> 
+                        // 검색을 위한 key 값은 sql 의 key 애트리뷰트에 넣는다, 필수값
+                    </extension>
+                </simpleContent>
+            </complexType>
+        </schema>
+        
+        셸이나 도스창에서 프로젝트 루트 폴더로 이동한 뒤 명령 사용하여 컴파일
+        xjc -p [생성할 클래스의 패키지] [xsd 파일 이름] -d [생성된 파일이 저장될 위치]
+        
+        두 개의 바인딩용 자바 클래스와 팩토리 클래스 생성
+        <sqlmap> 이 바인딩 될 Sqlmap 클래스
+        <sql> 태그의 정보를 담을 SqlType 클래스
+        
+        언마샬링
+            JAXB에서 xml 문서를 읽어서 자바의 오브젝트로 변환하는 것
+        마샬링
+            JAXB에서 바인딩 오브젝트를 xml 문서로 변환하는 것
+        
 ## 8. 스프링이란 무엇인가?
 ## 9. 스프링 프로젝트 시작하기

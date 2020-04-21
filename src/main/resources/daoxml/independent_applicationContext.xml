@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/cache"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-3.0.xsd http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd">
     <!--    <bean id="connectionMaker" class="dao.xml.DConnectionMaker"/>-->
     <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
         <property name="driverClass" value="com.mysql.jdbc.Driver"/>
@@ -11,7 +16,18 @@
     </bean>
     <bean id="userDao" class="dao.independent.UserDaoJDBC">
         <property name="dataSource" ref="dataSource"/>
+        <!--        <property name="sqlAdd" value="insert into users(id, name, password,-->
+        <!--                            level, login ,recommend) values(?, ?, ?, ?, ?, ?)"/>-->
+        <!--        <property name="sqlMap">-->
+        <!--            <map>-->
+        <!--                <entry key="add" value="insert into users(id, name, password, level, login ,recommend)-->
+        <!--                                        values(?, ?, ?, ?, ?, ?)"/>-->
+        <!--                <entry key="get" value="select * from users where id = ?"/>-->
+        <!--            </map>-->
+        <!--        </property>-->
+        <property name="sqlService" ref="sqlService"/>
     </bean>
+
     <bean id="eventUserLevelUpgradePolicy" class="dao.independent.EventUserLevelUpgradePolicy">
         <constructor-arg ref="userDao"/>
     </bean>
@@ -20,8 +36,8 @@
         <constructor-arg ref="dataSource"/>
     </bean>
 
-<!--    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">-->
-<!--        <property name="host" value="mail.server.com"/>-->
+    <!--    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">-->
+    <!--        <property name="host" value="mail.server.com"/>-->
     <bean id="mailSender" class="dao.independent.DummyMailSender">
     </bean>
 
@@ -32,5 +48,24 @@
         <property name="transactionManager" ref="transactionManager"/>
         <property name="mailSender" ref="mailSender"/>
     </bean>
+
+    <!--    <bean id="sqlService" class="dao.independent.SimpleSqlService">-->
+    <!--        <property name="sqlMap">-->
+    <!--            <map>-->
+    <!--                <entry key="userAdd" value="insert into users(id, name, password, level, login ,recommend)-->
+    <!--                                        values(?, ?, ?, ?, ?, ?)"/>-->
+    <!--                <entry key="userGet" value="select * from users where id = ?"/>-->
+    <!--                <entry key="userGetAll" value="select * from users order by id"/>-->
+    <!--                <entry key="userDeleteAll" value="delete from users"/>-->
+    <!--                <entry key="userGetCount" value="select count(id) from users"/>-->
+    <!--                <entry key="userUpdate" value="update users set name = ?, password = ?, level = ?, login = ?, recommend = ? where id = ?"/>-->
+    <!--            </map>-->
+    <!--        </property>-->
+    <!--    </bean>-->
+    <bean id="sqlService" class="dao.independent.XmlSqlService">
+        <property name="sqlmapFile" value="independent/sqlmap.xml"/>
+    </bean>
+    <tx:annotation-driven/>
+    <context:annotation-config/>
 
 </beans>
